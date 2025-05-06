@@ -1,49 +1,117 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Tạo Ma Trận Đề Thi</title>
+  <title>Ma trận đề thi - AI Generator</title>
   <style>
     body { font-family: Arial; padding: 20px; }
-    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 8px; }
-    table { width: 100%; margin-top: 20px; }
-    input, select { padding: 8px; margin: 5px 0; width: 100%; }
-    button { padding: 10px 15px; }
+    textarea, input { width: 100%; padding: 10px; margin-top: 10px; }
+    button { margin-top: 10px; padding: 10px 20px; }
+    .topbar { display: flex; justify-content: flex-end; gap: 10px; }
+    .balance { font-weight: bold; margin-left: auto; margin-right: 10px; }
+    #history { margin-top: 20px; }
   </style>
 </head>
 <body>
-  <h1>Tạo Ma Trận Đề Thi</h1>
-  <form id="matrixForm">
-    <label>Tên môn học: <input type="text" id="subject" required></label><br>
-    <label>Số câu hỏi: <input type="number" id="numQuestions" required></label><br>
-    <label>Mức độ khó:
-      <select id="difficulty">
-        <option value="dễ">Dễ</option>
-        <option value="trung bình">Trung bình</option>
-        <option value="khó">Khó</option>
-      </select>
-    </label><br>
-    <button type="submit">Tạo ma trận</button>
-  </form>
+  <div class="topbar">
+    <div class="balance">Số dư: <span id="balance">0</span> VNĐ</div>
+    <button onclick="showLogin()">Đăng nhập</button>
+    <button onclick="showRegister()">Đăng ký</button>
+    <button onclick="pay()">Thanh toán</button>
+  </div>
 
-  <div id="result"></div>
+  <h2>Tạo Ma Trận Đề Thi</h2>
+  <textarea id="prompt" placeholder="Nhập yêu cầu đề thi..."></textarea><br>
+  <button onclick="generateMatrix()">Tạo Ma Trận</button>
+
+  <div id="matrixResult"></div>
+  <button onclick="exportPDF()">Xuất PDF</button>
+  <button onclick="exportWord()">Xuất Word</button>
+
+  <div id="history"><h3>Lịch sử đề thi</h3><ul id="historyList"></ul></div>
+
+  <div id="authBox" style="margin-top: 30px;"></div>
 
   <script>
-    document.getElementById('matrixForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const subject = document.getElementById('subject').value;
-      const numQuestions = document.getElementById('numQuestions').value;
-      const difficulty = document.getElementById('difficulty').value;
+    let token = localStorage.getItem('token') || null;
 
-      const response = await fetch('http://localhost:3000/api/generate-matrix', {
+    async function generateMatrix() {
+      const prompt = document.getElementById('prompt').value;
+      const res = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, numQuestions, difficulty })
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? 'Bearer ' + token : ''
+        },
+        body: JSON.stringify({ prompt })
       });
+      const data = await res.json();
+      document.getElementById('matrixResult').innerHTML = data.html || 'Lỗi tạo ma trận';
+      document.getElementById('balance').innerText = data.balance || 0;
+      loadHistory();
+    }
 
-      const data = await response.json();
-      document.getElementById('result').innerHTML = data.html || '<p>Có lỗi xảy ra!</p>';
-    });
+    function exportPDF() { alert("Tính năng xuất PDF đang phát triển..."); }
+    function exportWord() { alert("Tính năng xuất Word đang phát triển..."); }
+    function pay() { window.location.href = "https://payment.momo.vn/"; }
+
+    function showLogin() {
+      document.getElementById('authBox').innerHTML = `
+        <h3>Đăng nhập</h3>
+        <input id="loginUser" placeholder="Email">
+        <input id="loginPass" type="password" placeholder="Mật khẩu">
+        <button onclick="login()">Đăng nhập</button>
+      `;
+    }
+
+    function showRegister() {
+      document.getElementById('authBox').innerHTML = `
+        <h3>Đăng ký</h3>
+        <input id="regUser" placeholder="Email">
+        <input id="regPass" type="password" placeholder="Mật khẩu">
+        <button onclick="register()">Đăng ký</button>
+      `;
+    }
+
+    async function login() {
+      const email = document.getElementById('loginUser').value;
+      const password = document.getElementById('loginPass').value;
+      const res = await fetch('/api/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.token) {
+        token = data.token;
+        localStorage.setItem('token', token);
+        alert("Đăng nhập thành công!");
+        loadHistory();
+      } else alert("Đăng nhập thất bại");
+    }
+
+    async function register() {
+      const email = document.getElementById('regUser').value;
+      const password = document.getElementById('regPass').value;
+      const res = await fetch('/api/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      alert(data.message || "Đăng ký thất bại");
+    }
+
+    async function loadHistory() {
+      if (!token) return;
+      const res = await fetch('/api/history', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const data = await res.json();
+      const list = data.history || [];
+      document.getElementById('historyList').innerHTML =
+        list.map(item => `<li>${item}</li>`).join('');
+    }
+
+    loadHistory();
   </script>
 </body>
 </html>
