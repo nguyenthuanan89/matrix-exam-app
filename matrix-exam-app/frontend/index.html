@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Tạo Ma Trận Đề Thi</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 8px; }
+    table { width: 100%; margin-top: 20px; }
+    input, select { padding: 8px; margin: 5px 0; width: 100%; }
+    button { padding: 10px 15px; }
+  </style>
+</head>
+<body>
+  <h1>Tạo Ma Trận Đề Thi</h1>
+  <form id="matrixForm">
+    <label>Tên môn học: <input type="text" id="subject" required></label><br>
+    <label>Số câu hỏi: <input type="number" id="numQuestions" required></label><br>
+    <label>Mức độ khó:
+      <select id="difficulty">
+        <option value="dễ">Dễ</option>
+        <option value="trung bình">Trung bình</option>
+        <option value="khó">Khó</option>
+      </select>
+    </label><br>
+    <button type="submit">Tạo ma trận</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    document.getElementById('matrixForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const subject = document.getElementById('subject').value;
+      const numQuestions = document.getElementById('numQuestions').value;
+      const difficulty = document.getElementById('difficulty').value;
+
+      const response = await fetch('http://localhost:3000/api/generate-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, numQuestions, difficulty })
+      });
+
+      const data = await response.json();
+      document.getElementById('result').innerHTML = data.html || '<p>Có lỗi xảy ra!</p>';
+    });
+  </script>
+</body>
+</html>
